@@ -1,0 +1,60 @@
+# Environment and secrets
+.env
+.env.local
+*.env
+venv/
+.venv/
+env/
+
+# Never commit tokens
+*GITHUB_TOKEN*
+*.pem
+
+# Local eval outputs
+results/
+
+# Dataset (download from Hugging Face; keep large files out of git)
+dataset/
+
+# Local tooling
+.claude/
+
+# Logs
+logs/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# IDE and OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+
+# Testing and coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/

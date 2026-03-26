@@ -1,0 +1,110 @@
+# SWE-PRBench Model Configuration
+# Judge model: gpt_5_2 (never evaluated as agentxw)
+# All agent models use openai-compatible interface where possible
+
+defaults:
+  judge_model: gpt_5_2         
+  configs: [A, B, C]
+  batch_api: false             
+
+# ─────────────────────────────────────────────
+# PROVIDERS
+# ─────────────────────────────────────────────
+providers:
+  anthropic:
+    api_key_env: ANTHROPIC_API_KEY
+    base_url: https://api.anthropic.com
+
+  openai:
+    api_key_env: OPENAI_API_KEY
+    base_url: https://api.openai.com/v1
+
+  groq:
+    api_key_env: GROQ_API_KEY
+    base_url: https://api.groq.com/openai/v1
+
+  mistral:
+    api_key_env: MISTRAL_API_KEY
+    base_url: https://api.mistral.ai/v1
+
+  deepseek:
+    api_key_env: DEEPSEEK_API_KEY
+    base_url: https://api.deepseek.com       
+
+
+# ─────────────────────────────────────────────
+# JUDGE — dedicated, never used as agent
+# ─────────────────────────────────────────────
+judge:
+  gpt_5_2:
+    provider: openai
+    model: gpt-5.2                           
+    note: "Dedicated judge only. Cross-family avoids self-enhancement bias."
+
+# ─────────────────────────────────────────────
+# AGENTS — 13 models across 7 families
+# ─────────────────────────────────────────────
+models:
+
+  # ── Anthropic (3 models) ──────────────────
+  claude_sonnet_46:
+    provider: anthropic
+    model: claude-sonnet-4-6
+    tier: mid
+    cost_input_per_mtok: 3.00
+    cost_output_per_mtok: 15.00
+
+  claude_haiku_45:
+    provider: anthropic
+    model: claude-haiku-4-5-20251001
+    tier: budget
+    cost_input_per_mtok: 1.00
+    cost_output_per_mtok: 5.00
+
+  # ── OpenAI (2 models) ────────────────────
+  gpt_4o:
+    provider: openai
+    model: gpt-4o
+    tier: frontier
+    cost_input_per_mtok: 2.50
+    cost_output_per_mtok: 10.00
+
+  gpt_4o_mini:
+    provider: openai
+    model: gpt-4o-mini
+    tier: budget
+    cost_input_per_mtok: 0.15
+    cost_output_per_mtok: 0.60
+
+  # ── Google (3 models) ────────────────────
+
+  # ── Mistral (2 models) ───────────────────
+  mistral_large_3:
+    provider: mistral
+    model: mistral-large-latest
+    tier: frontier
+    cost_input_per_mtok: 2.00
+    cost_output_per_mtok: 6.00
+
+  mistral_small:
+    provider: mistral
+    model: mistral-small-latest
+    tier: budget
+    cost_input_per_mtok: 0.10
+    cost_output_per_mtok: 0.30
+
+  # ── Meta via Groq (1 model) ───────────────
+  llama_33_70b:
+    provider: groq
+    model: llama-3.3-70b-versatile
+    tier: open
+    cost_input_per_mtok: 0.00
+    cost_output_per_mtok: 0.00
+
+  # ── DeepSeek (1 model) ───────────────────
+  deepseek_v3:
+    provider: deepseek
+    model: deepseek-chat              
+    tier: open
+    cost_input_per_mtok: 0.28
+    cost_output_per_mtok: 0.42
