@@ -1,8 +1,10 @@
 # SWE-PRBench — Evaluation Harness
 
-> 📄 Paper: [View Paper](https://arxiv.org/abs/2603.26130)
-> 🤗 Dataset: [View Dataset](https://huggingface.co/datasets/foundry-ai/swe-prbench)  
-> ✍️ Blog: [View Blog](https://foundryhq.ai/blog/swe-prbench-benchmarking-ai-code-review-quality)
+> Paper: [View Paper](https://arxiv.org/abs/2603.26130)
+
+> Dataset: [View Dataset](https://huggingface.co/datasets/foundry-ai/swe-prbench)
+
+> Blog: [View Blog](https://foundryhq.ai/blog/swe-prbench-benchmarking-ai-code-review-quality)
 
 Public repository for **running evaluations** on the SWE-PRBench dataset.
 
