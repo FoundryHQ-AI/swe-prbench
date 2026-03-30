@@ -1,8 +1,8 @@
 # SWE-PRBench — Evaluation Harness
 
-> 📄 Paper: Coming soon on arXiv  
-> 🤗 Dataset: https://huggingface.co/datasets/foundry-ai/swe-prbench  
-> ✍️ Blog: [link]
+> 📄 Paper: [View Paper](https://arxiv.org/abs/2603.26130)
+> 🤗 Dataset: [View Dataset](https://huggingface.co/datasets/foundry-ai/swe-prbench)  
+> ✍️ Blog: [View Blog](https://foundryhq.ai/blog/swe-prbench-benchmarking-ai-code-review-quality)
 
 Public repository for **running evaluations** on the SWE-PRBench dataset.
 
@@ -144,11 +144,12 @@ Scores reported in the paper reflect pipeline version `v0.4.1` with GPT-5.2 as j
 If you use SWE-PRBench in your research, please cite the dataset:
 ```bibtex
 @misc{kumar2026sweprbench,
-  title={SWE-PRBench: Benchmarking AI Code Review Quality
+  title = {SWE-PRBench: Benchmarking AI Code Review Quality
          Against Real Pull Request Feedback},
   author={Kumar, Deepak},
-  year={2026},
-  howpublished={\url{https://huggingface.co/datasets/foundry-ai/swe-prbench}}
+  archivePrefix = {arXiv},
+  primaryClass = {cs.SE},
+  url = {https://arxiv.org/abs/2603.26130}
 }
 ```
 
