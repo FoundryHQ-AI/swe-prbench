@@ -1,4 +1,9 @@
-# SWE-PRBench — Evaluation Harness
+# SWE-PRBench — Evaluation Harness (Claude Code CLI fork)
+
+> Fork of [FoundryHQ-AI/swe-prbench](https://github.com/FoundryHQ-AI/swe-prbench)
+> adding a `cli_claude` provider that drives the local `claude` CLI
+> (Claude Code) in headless mode under the user's logged-in OAuth
+> subscription — no API key billing.
 
 > Paper: [View Paper](https://arxiv.org/abs/2603.26130)
 
@@ -11,10 +16,28 @@ Public repository for **running evaluations** on the SWE-PRBench dataset.
 | Path | Purpose |
 |------|---------|
 | `eval_harness/` | Agent + judge pipeline (`run_eval.py`), scoring — see `eval_harness/README.md` |
+| `eval_harness/model_endpoints.claude_code.yaml` | Fork-only config: 4 Claude Opus 4.7/4.8 agent entries + Sonnet 4.6 judge, all over `cli_claude` |
+| `claude_code_eval/` | Driver + aggregator + results for the Claude Code CLI experiment — see `claude_code_eval/README.md` |
 | `RUBRIC.md` | Frozen classification rubric (CONFIRMED / PLAUSIBLE / FABRICATED) |
 | `pipeline_version.txt` | Protocol version — must match the dataset build (`v0.4.1`) |
 
 Dataset (contexts, annotations, `prs.jsonl`) is hosted separately on HuggingFace — not in this repo.
+
+---
+
+## Claude Code CLI experiment (this fork)
+
+Four agent configurations across the Claude Opus 4.7/4.8 reasoning-effort
+axis, evaluated on the `eval_100` split with Claude Sonnet 4.6 as judge.
+All calls route through `claude -p` so the cost is covered by the user's
+Anthropic subscription rather than API-key billing.
+
+<!-- BEGIN: CLAUDE_CODE_LEADERBOARD -->
+_Run pending — populated by `claude_code_eval/scripts/build_results_table.py`._
+<!-- END: CLAUDE_CODE_LEADERBOARD -->
+
+Methodology, judge choice, and reproduction instructions:
+[`claude_code_eval/README.md`](claude_code_eval/README.md).
 
 ---
 

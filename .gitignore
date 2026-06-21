@@ -13,8 +13,24 @@ env/
 # Local eval outputs
 results/
 
+# claude_code_eval/ outputs: keep aggregate artifacts and per-run reports
+# committed; drop heavy per-PR dumps and logs.
+!claude_code_eval/results/
+!claude_code_eval/results/leaderboard.csv
+!claude_code_eval/results/leaderboard.md
+!claude_code_eval/results/eval_100_task_ids.txt
+!claude_code_eval/results/runs/
+!claude_code_eval/results/runs/*/
+!claude_code_eval/results/runs/*/eval_report.json
+!claude_code_eval/results/runs/*/validation_failures.json
+claude_code_eval/results/runs/*/agent_outputs/
+claude_code_eval/results/runs/*/judge_outputs/
+claude_code_eval/results/runs/*/eval_results/
+claude_code_eval/results/logs/
+
 # Dataset (download from Hugging Face; keep large files out of git)
 dataset/
+swe-prbench-data/
 
 # Local tooling
 .claude/

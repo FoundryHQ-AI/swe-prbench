@@ -1,0 +1,61 @@
+# SWE-PRBench — Claude Code CLI experiment configuration.
+#
+# Every model entry below routes through the local `claude` CLI in headless
+# mode (`claude -p`), driven by this fork's `cli_claude` provider. Because the
+# CLI uses the user's logged-in OAuth subscription, no API keys are required.
+#
+# The agent set spans the reasoning-effort axis on Opus 4.8 (low / medium /
+# max) plus an Opus 4.7 reference at max effort.
+#
+# The judge is Claude Sonnet 4.6 — the paper used GPT-5.2 as the canonical
+# judge and cross-validated against Sonnet 4.6 (κ=0.75), so this swap keeps
+# the experiment within the subscription while remaining inside the paper's
+# validated judge family.
+
+defaults:
+  judge_model: claude_sonnet_46_judge
+  configs: [A, B, C]
+  batch_api: false
+
+providers:
+  cli_claude:
+    # No api_key_env: cli_claude uses OAuth from the local `claude` install.
+    # Override binary location with CLAUDE_BIN if needed; default is `claude`
+    # resolved via PATH.
+    binary: claude
+
+judge:
+  claude_sonnet_46_judge:
+    provider: cli_claude
+    model: claude-sonnet-4-6
+    effort: low
+    note: >-
+      Judge runs via the local Claude Code CLI under the OAuth subscription.
+      Cross-family from Opus avoids self-enhancement bias on the agent rollouts.
+
+models:
+  # ── Opus 4.8 across the reasoning-effort axis ──────────────────────────
+  opus_4_8_low:
+    provider: cli_claude
+    model: claude-opus-4-8
+    effort: low
+    tier: frontier
+
+  opus_4_8_medium:
+    provider: cli_claude
+    model: claude-opus-4-8
+    effort: medium
+    tier: frontier
+
+  opus_4_8_max:
+    provider: cli_claude
+    model: claude-opus-4-8
+    effort: max
+    tier: frontier
+
+  # ── Opus 4.7 reference point at max effort ─────────────────────────────
+  opus_4_7_max:
+    provider: cli_claude
+    model: claude-opus-4-7
+    effort: max
+    tier: frontier

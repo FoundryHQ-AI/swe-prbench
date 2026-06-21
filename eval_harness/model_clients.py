@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import time
 import re
 from dataclasses import dataclass, field
@@ -124,10 +125,16 @@ class ModelRouter:
                 "Use --model-config with matching models.<id> entries."
             )
         endpoint = self.models[model_id]
+        # cli_claude shells out to the local `claude` CLI and uses the user's
+        # logged-in subscription, so no API key is required.
+        if endpoint.provider == "cli_claude":
+            api_key = ""
+        else:
+            api_key = _resolve_api_key(endpoint.model_cfg, endpoint.provider_cfg)
         return ModelEndpoint(
             provider=endpoint.provider,
             model=endpoint.model,
-            api_key=_resolve_api_key(endpoint.model_cfg, endpoint.provider_cfg),
+            api_key=api_key,
             base_url=_resolve_base_url(endpoint.model_cfg, endpoint.provider_cfg),
             model_cfg=endpoint.model_cfg,
             provider_cfg=endpoint.provider_cfg,
@@ -152,6 +159,10 @@ class ModelRouter:
                 max_tokens,
                 cache_system_prompt=cache_system_prompt,
             )
+        # Local Claude Code CLI driven via subprocess (uses the user's
+        # logged-in OAuth subscription instead of API key billing).
+        if provider == "cli_claude":
+            return self._generate_cli_claude(resolved_endpoint, system, user, max_tokens)
         # Google: use native Gemini API with safetySettings support
         if provider == "google":
             return self._generate_gemini_native(resolved_endpoint, system, user, max_tokens)
@@ -265,6 +276,102 @@ class ModelRouter:
             if block.get("type") == "text" and isinstance(block.get("text"), str):
                 text_parts.append(block["text"])
         return "\n".join(text_parts).strip()
+
+    def _generate_cli_claude(
+        self,
+        endpoint: ModelEndpoint,
+        system: str,
+        user: str,
+        max_tokens: int,
+    ) -> str:
+        """
+        Run the local `claude` CLI in headless mode (`-p`) under the user's
+        logged-in OAuth subscription. `effort` is read from the model entry
+        (low | medium | high | xhigh | max) and forwarded to `--effort`.
+
+        Built-in Claude Code tools are explicitly disabled (`--tools ""`) so the
+        invocation behaves as a pure prompt->completion pair, matching the
+        one-shot semantics the harness expects.
+        """
+        binary = str(
+            endpoint.model_cfg.get("binary")
+            or endpoint.provider_cfg.get("binary")
+            or os.environ.get("CLAUDE_BIN")
+            or "claude"
+        )
+        effort = str(endpoint.model_cfg.get("effort") or "medium").strip().lower()
+        if effort not in {"low", "medium", "high", "xhigh", "max"}:
+            raise ValueError(
+                f"cli_claude entry '{endpoint.model}' has invalid effort {effort!r}; "
+                "expected one of low|medium|high|xhigh|max."
+            )
+        # Generous timeout: --effort max with deep thinking can take several
+        # minutes per PR. Override per-entry via timeout_sec or globally via
+        # CLAUDE_CLI_TIMEOUT_SEC.
+        default_timeout = 900
+        timeout_raw = (
+            endpoint.model_cfg.get("timeout_sec")
+            or endpoint.provider_cfg.get("timeout_sec")
+            or os.environ.get("CLAUDE_CLI_TIMEOUT_SEC")
+            or default_timeout
+        )
+        try:
+            timeout_sec = max(60, int(timeout_raw))
+        except (TypeError, ValueError):
+            timeout_sec = default_timeout
+
+        argv = [
+            binary,
+            "-p",
+            "--model", endpoint.model,
+            "--effort", effort,
+            "--tools", "",
+            "--no-session-persistence",
+            "--safe-mode",                            # skip CLAUDE.md / plugins / MCP / hooks
+            "--disable-slash-commands",
+            "--exclude-dynamic-system-prompt-sections",
+            "--system-prompt", system,
+            "--output-format", "text",
+        ]
+        # Run from /tmp so the CLI's CWD isn't inside this repo (defensive even
+        # though tools are disabled — keeps any auxiliary behavior cleanly
+        # scoped).
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                proc = subprocess.run(
+                    argv,
+                    input=user,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout_sec,
+                    cwd="/tmp",
+                )
+            except subprocess.TimeoutExpired as e:
+                last_error = e
+                if attempt == 2:
+                    raise RuntimeError(
+                        f"cli_claude timed out after {timeout_sec}s (model={endpoint.model}, effort={effort})"
+                    ) from e
+                time.sleep(min(2 ** attempt, 8))
+                continue
+            if proc.returncode != 0:
+                stderr_tail = (proc.stderr or "")[-500:]
+                # Transient failures (rate limit, transient OAuth refresh) are
+                # worth retrying; permanent failures (bad args) are not, but
+                # the safe default is to retry a small bounded number of times.
+                last_error = RuntimeError(
+                    f"cli_claude exit={proc.returncode} model={endpoint.model} "
+                    f"effort={effort} stderr={stderr_tail!r}"
+                )
+                if attempt == 2:
+                    raise last_error
+                time.sleep(min(2 ** attempt, 8))
+                continue
+            return (proc.stdout or "").strip()
+        raise RuntimeError(
+            f"cli_claude failed after retries: {last_error}"
+        )
 
     def _generate_gemini_native(
         self, endpoint: ModelEndpoint, system: str, user: str, max_tokens: int
