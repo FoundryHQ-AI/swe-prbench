@@ -336,8 +336,12 @@ class ModelRouter:
         # Run from /tmp so the CLI's CWD isn't inside this repo (defensive even
         # though tools are disabled — keeps any auxiliary behavior cleanly
         # scoped).
+        # 5 attempts with exponential backoff (2/4/8/16/30s) gives us a
+        # cumulative ~60s recovery window — long enough to absorb a small
+        # transport blip without contaminating the experiment.
+        max_attempts = 5
         last_error: Exception | None = None
-        for attempt in range(3):
+        for attempt in range(max_attempts):
             try:
                 proc = subprocess.run(
                     argv,
@@ -349,11 +353,11 @@ class ModelRouter:
                 )
             except subprocess.TimeoutExpired as e:
                 last_error = e
-                if attempt == 2:
+                if attempt == max_attempts - 1:
                     raise RuntimeError(
                         f"cli_claude timed out after {timeout_sec}s (model={endpoint.model}, effort={effort})"
                     ) from e
-                time.sleep(min(2 ** attempt, 8))
+                time.sleep(min(2 ** (attempt + 1), 30))
                 continue
             if proc.returncode != 0:
                 stderr_tail = (proc.stderr or "")[-500:]
@@ -364,11 +368,13 @@ class ModelRouter:
                     f"cli_claude exit={proc.returncode} model={endpoint.model} "
                     f"effort={effort} stderr={stderr_tail!r}"
                 )
-                if attempt == 2:
-                    # Only emit the SUSTAINED-failure sentinel after all
-                    # retries are exhausted. This is the watchdog's only
-                    # trigger — single transient failures (attempt 0/1) are
-                    # silent and recovered by the next retry.
+                if attempt == max_attempts - 1:
+                    # All retries exhausted — emit the watchdog sentinel.
+                    # Genuinely transient failures get absorbed by the
+                    # retry loop and never get here. Single SUSTAINED
+                    # events are still possible from a 60s+ blip, so the
+                    # watchdog requires multiple within a window before
+                    # killing runs.
                     print(
                         f"CLAUDE_CLI_FAILURE_SUSTAINED exit={proc.returncode} "
                         f"model={endpoint.model} effort={effort} "
@@ -377,7 +383,7 @@ class ModelRouter:
                         flush=True,
                     )
                     raise last_error
-                time.sleep(min(2 ** attempt, 8))
+                time.sleep(min(2 ** (attempt + 1), 30))
                 continue
             return (proc.stdout or "").strip()
         raise RuntimeError(
