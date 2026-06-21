@@ -766,6 +766,34 @@ def main() -> None:
 
             async def _run_one(task_id: str, cfg: str, eval_input, stem: str):
                 async with semaphore:
+                    # Resume support: if a previous invocation already wrote the
+                    # eval_result for this (task_id, config) pair, skip the
+                    # expensive agent + judge calls. The final report is
+                    # rebuilt from `eval_results/*_eval.json` so the
+                    # already-done record still contributes to the aggregate.
+                    existing_eval = run_root / "eval_results" / f"{stem}_eval.json"
+                    if existing_eval.exists():
+                        log.info(
+                            "eval_task_skip_resume",
+                            task_id=task_id,
+                            config=cfg,
+                            agent_model=agent_model_id,
+                            judge_model=judge_model_id,
+                        )
+                        async with progress_lock:
+                            progress["done"] += 1
+                            done = progress["done"]
+                        log.info(
+                            "eval_progress",
+                            task_id=task_id,
+                            config=cfg,
+                            done=done,
+                            total=total,
+                            agent_model=agent_model_id,
+                            judge_model=judge_model_id,
+                            resumed=True,
+                        )
+                        return
                     log.info(
                         "eval_task_start",
                         task_id=task_id,

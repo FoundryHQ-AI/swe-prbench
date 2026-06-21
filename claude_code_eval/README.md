@@ -68,3 +68,27 @@ emits. The aggregator writes the combined leaderboard to
 a live `claude -p` subprocess plus a judge call; pushing this much past 4
 on a laptop can cause OOMs or the OAuth rate limiter to kick in. Override
 with `CONCURRENCY=4 bash claude_code_eval/scripts/run_experiment.sh`.
+
+## Pause / resume
+
+The full 4×100×3 run takes many hours and may need to be paused (subscription
+token budget, machine reboot, etc.). The harness in this fork supports
+**clean resume**: stop the running processes whenever, then re-launch with
+the same script invocation, and it will skip any `(task_id, config)` pair
+whose `eval_result_*.json` is already on disk and continue with the rest.
+
+Stop a run cleanly by sending SIGINT/SIGTERM to the bash + python processes
+(or close the terminal). Restart with:
+
+```bash
+# Resume a single agent
+bash claude_code_eval/scripts/run_single_agent.sh opus_4_8_max
+
+# Or resume all four agents (sequentially); already-done records are
+# auto-skipped, so the cost of running this even after a partial run is
+# only the remaining records.
+bash claude_code_eval/scripts/run_experiment.sh
+```
+
+Resume is implemented as a one-line check at the top of the per-task
+coroutine in `eval_harness/run_eval.py` (look for `eval_task_skip_resume`).
