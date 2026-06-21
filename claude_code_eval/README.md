@@ -69,6 +69,34 @@ a live `claude -p` subprocess plus a judge call; pushing this much past 4
 on a laptop can cause OOMs or the OAuth rate limiter to kick in. Override
 with `CONCURRENCY=4 bash claude_code_eval/scripts/run_experiment.sh`.
 
+## Rate-limit watchdog
+
+A long-running experiment that drives the Claude Code CLI can hit the
+subscription rate limit mid-run. Two things protect the experiment:
+
+1. **In-flight watchdog** — a `tail -F` over the per-agent logs in
+   `claude_code_eval/results/logs/`, filtered through a strict regex,
+   calls `scripts/stop_all.sh` the moment a real rate-limit signature
+   appears. The regex (set as the watchdog command) requires anchored
+   tokens like `cli_claude exit=`, `HTTP 429`, `429 Too Many`,
+   `Quota-exceeded`, `usage limit`, `OAuth.*expired` — never a bare
+   substring like `429` (which would false-positive on tqdm output such
+   as `19429.83it/s`). The watchdog is case-insensitive but every
+   anchor still requires non-digit context, so progress bars don't
+   trigger it.
+
+2. **Contamination-aware resume** — even if the watchdog misses a hit
+   (or the user kills the runs for any reason), the resume logic
+   (`_eval_result_is_contaminated` in `eval_harness/run_eval.py`)
+   distinguishes legitimate model-output failures (kept) from CLI /
+   transport failures (deleted and re-run). Without this, a
+   rate-limited claude-cli failure would be recorded as a hard-zero
+   detection rate, biasing the agent's score downward.
+
+If your watchdog ever needs to be updated, run the validation snippet
+at the top of `claude_code_eval/scripts/stop_all.sh` against the
+existing logs first.
+
 ## Pause / resume
 
 The full 4×100×3 run takes many hours and may need to be paused (subscription
