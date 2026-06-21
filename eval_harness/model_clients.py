@@ -357,6 +357,18 @@ class ModelRouter:
                 continue
             if proc.returncode != 0:
                 stderr_tail = (proc.stderr or "")[-500:]
+                # Emit a unique sentinel so the rate-limit watchdog has a
+                # zero-false-positive signal. This token (CLAUDE_CLI_FAILURE)
+                # is never produced by anything else — not by HF Hub warnings
+                # mentioning "rate limits", not by tqdm progress lines that
+                # happen to contain the digits "429".
+                print(
+                    f"CLAUDE_CLI_FAILURE exit={proc.returncode} "
+                    f"model={endpoint.model} effort={effort} attempt={attempt} "
+                    f"stderr_tail={stderr_tail!r}",
+                    file=__import__("sys").stderr,
+                    flush=True,
+                )
                 # Transient failures (rate limit, transient OAuth refresh) are
                 # worth retrying; permanent failures (bad args) are not, but
                 # the safe default is to retry a small bounded number of times.
