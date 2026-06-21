@@ -461,6 +461,55 @@ def _run_agent_batch_openai(
     return out
 
 
+# Substrings in agent_output.parse_error that mean the agent was never
+# successfully reached (vs. the agent emitting unparseable output). Resume
+# logic deletes these records so they get re-run on the next launch.
+_CLI_TRANSPORT_FAILURE_SIGNATURES: tuple[str, ...] = (
+    "cli_claude exit=",
+    "cli_claude timed out",
+    "cli_claude failed after retries",
+    "Agent generation failed after",
+    "pipeline_error:",
+    "rate limit",
+    "rate_limit",
+    "Too Many Requests",
+    "429",
+    "usage limit",
+    "subscription limit",
+    "quota",
+    "ConnectionError",
+    "ReadTimeout",
+    "ConnectTimeout",
+)
+
+
+def _eval_result_is_contaminated(agent_output_path: Path) -> bool:
+    """
+    True if the previously-written agent output represents a CLI / transport
+    failure (rate limit, subprocess crash, etc.) rather than a legitimate
+    "model returned garbage" outcome. In that case the paired eval_result is
+    a hard-zero record that does not reflect the agent's real behavior, so
+    resume should discard it and re-run the (task_id, config) pair.
+    """
+    try:
+        data = json.loads(agent_output_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return False
+    except Exception:
+        # Unparseable agent_output file — safer to re-run.
+        return True
+    if not isinstance(data, dict):
+        return True
+    if bool(data.get("parse_success")):
+        return False
+    parse_error = str(data.get("parse_error") or "")
+    if not parse_error:
+        # Failed without an explanation — re-run defensively.
+        return True
+    lowered = parse_error.lower()
+    return any(sig.lower() in lowered for sig in _CLI_TRANSPORT_FAILURE_SIGNATURES)
+
+
 def _load_all_eval_results(run_root: Path) -> list[EvalResult]:
     out: list[EvalResult] = []
     eval_dir = run_root / "eval_results"
@@ -771,7 +820,31 @@ def main() -> None:
                     # expensive agent + judge calls. The final report is
                     # rebuilt from `eval_results/*_eval.json` so the
                     # already-done record still contributes to the aggregate.
+                    #
+                    # IMPORTANT: do NOT skip records that were written as a
+                    # CLI / transport failure (e.g. claude-cli rate limit,
+                    # subprocess timeout). Those would contaminate the
+                    # aggregate as detection_rate=0 evaluations even though
+                    # the agent was never successfully reached. Re-run them.
                     existing_eval = run_root / "eval_results" / f"{stem}_eval.json"
+                    if existing_eval.exists() and _eval_result_is_contaminated(
+                        run_root / "agent_outputs" / f"{stem}_agent.json"
+                    ):
+                        log.info(
+                            "eval_task_retry_contaminated",
+                            task_id=task_id,
+                            config=cfg,
+                            agent_model=agent_model_id,
+                            judge_model=judge_model_id,
+                            reason="cli_or_transport_failure",
+                        )
+                        # Remove the bad record so the rerun replaces it cleanly.
+                        try:
+                            existing_eval.unlink()
+                        except FileNotFoundError:
+                            pass
+                        existing_eval = run_root / "eval_results" / f"{stem}_eval.json"
+
                     if existing_eval.exists():
                         log.info(
                             "eval_task_skip_resume",
