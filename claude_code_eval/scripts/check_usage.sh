@@ -12,7 +12,7 @@
 set -u
 TMUX_SESSION="usage_probe_$$"
 tmux kill-session -t "${TMUX_SESSION}" 2>/dev/null || true
-tmux new-session -d -s "${TMUX_SESSION}" -x 200 -y 60 'claude --no-chrome --no-session-persistence' >/dev/null 2>&1
+tmux new-session -d -s "${TMUX_SESSION}" -x 200 -y 60 'claude --no-chrome' >/dev/null 2>&1
 # Boot time for the interactive shell + initial render.
 sleep 8
 tmux send-keys -t "${TMUX_SESSION}" '/usage' Enter 2>/dev/null || true
