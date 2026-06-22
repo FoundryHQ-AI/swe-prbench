@@ -327,6 +327,7 @@ class ModelRouter:
             "--effort", effort,
             "--tools", "",
             "--no-session-persistence",
+            "--no-chrome",                            # never trigger Chrome integration
             "--safe-mode",                            # skip CLAUDE.md / plugins / MCP / hooks
             "--disable-slash-commands",
             "--exclude-dynamic-system-prompt-sections",
