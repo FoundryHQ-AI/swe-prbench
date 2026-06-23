@@ -23,8 +23,11 @@ if [[ -n "${AGENTS:-}" ]]; then
   done
   disown
 else
-  echo "resume_when_reset: launching sequential balancer (1 record, then re-pick laggard)"
-  bash claude_code_eval/scripts/sequential_balancer.sh \
+  # Default: 2-slot parallel balancer. Switch back to sequential_balancer
+  # by setting BALANCER_SCRIPT=sequential_balancer.sh.
+  BALANCER="${BALANCER_SCRIPT:-parallel_balancer.sh}"
+  echo "resume_when_reset: launching ${BALANCER}"
+  bash "claude_code_eval/scripts/${BALANCER}" \
     >> "claude_code_eval/results/logs/balancer.log" 2>&1 &
   disown
 fi
