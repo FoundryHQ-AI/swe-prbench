@@ -1,0 +1,11 @@
+[
+  {
+    "task_id": "protocompile__645",
+    "config_name": "config_A_diff_only",
+    "agent_model": "opus_4_7_max",
+    "judge_model": "claude_sonnet_46_judge",
+    "failures": [
+      "judge_parse_fallback_used"
+    ]
+  }
+]

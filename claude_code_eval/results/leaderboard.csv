@@ -1,0 +1,5 @@
+agent_model,judge_model,n_prs,n_records,overall_a,overall_b,overall_c,overall_mean,detection_a,fpr_a,hallucination_a,precision_a,recall_a,f1_a,actionability_a,coverage_a,agent_parse_failures,judge_parse_fallback_count
+opus_4_7_max,claude_sonnet_46_judge,100,300,0.452,0.394,0.387,0.411,0.696,0.068,0.068,0.393,0.696,0.447,0.404,0.89,0,2
+opus_4_8_low,claude_sonnet_46_judge,100,300,0.466,0.414,0.43,0.437,0.633,0.08,0.08,0.492,0.633,0.5,0.424,0.86,0,0
+opus_4_8_max,claude_sonnet_46_judge,100,300,0.467,0.416,0.425,0.436,0.642,0.072,0.072,0.493,0.642,0.496,0.422,0.88,0,1
+opus_4_8_medium,claude_sonnet_46_judge,100,300,0.479,0.41,0.412,0.434,0.665,0.082,0.082,0.5,0.665,0.517,0.413,0.87,0,1

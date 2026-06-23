@@ -33,7 +33,46 @@ All calls route through `claude -p` so the cost is covered by the user's
 Anthropic subscription rather than API-key billing.
 
 <!-- BEGIN: CLAUDE_CODE_LEADERBOARD -->
-_Run pending — populated by `claude_code_eval/scripts/build_results_table.py`._
+
+**Headline (mean of config_A/B/C, 100 PRs × 3 contexts = 300 records per agent):**
+
+| Rank | Agent | Overall | DR_A  | FPR_A | Halluc_A | F1_A  | Coverage_A |
+|------|-------|---------|-------|-------|----------|-------|------------|
+| 1 | `opus_4_8_low` | 0.437 | 0.633 | 0.080 | 0.080 | 0.500 | 0.860 |
+| 2 | `opus_4_8_max` | 0.436 | 0.642 | 0.072 | 0.072 | 0.496 | 0.880 |
+| 3 | `opus_4_8_medium` | 0.434 | 0.665 | 0.082 | 0.082 | 0.517 | 0.870 |
+| 4 | `opus_4_7_max` | 0.411 | 0.696 | 0.068 | 0.068 | 0.447 | 0.890 |
+
+**Per-context overall score:**
+
+| Agent | config_A (diff only) | config_B (+ file content) | config_C (full context) |
+|-------|----------------------|---------------------------|-------------------------|
+| `opus_4_8_low`    | 0.466 | 0.414 | 0.430 |
+| `opus_4_8_max`    | 0.467 | 0.416 | 0.425 |
+| `opus_4_8_medium` | 0.479 | 0.410 | 0.412 |
+| `opus_4_7_max`    | 0.452 | 0.394 | 0.387 |
+
+**Key findings:**
+
+1. **Reasoning-effort axis is essentially flat on Opus 4.8.** low / medium / max
+   land within 0.003 of each other on overall. Higher effort does not help
+   on this benchmark.
+2. **Opus 4.7 max wins raw detection** (DR_A=0.696) **and has the lowest
+   hallucination rate** (Halluc_A=0.068), but finishes last on overall
+   because it emits ~37% more comments per PR (~4.9 vs ~3.6). The extra
+   comments are overwhelmingly PLAUSIBLE (real-looking observations
+   humans didn't raise), which the harness's precision component penalises.
+3. **Diff-only (config_A) beats full context (B and C) for every agent**, by
+   3-7 pp on overall_score. This matches the paper's headline finding
+   across all 8 of its non-Anthropic models.
+4. **Hallucination drops with more context for every agent** (e.g. medium:
+   8.2% A → 4.7% B → 3.5% C). More context = fewer factual errors, but
+   detection drops faster than hallucination falls.
+
+_Judge: Claude Sonnet 4.6 via `cli_claude`. Numbers comparable across fork
+agents only — not drop-in comparable to the paper's GPT-5.2-judge
+leaderboard. CSV at [`claude_code_eval/results/leaderboard.csv`](claude_code_eval/results/leaderboard.csv);
+per-PR eval reports under [`claude_code_eval/results/runs/`](claude_code_eval/results/runs/)._
 <!-- END: CLAUDE_CODE_LEADERBOARD -->
 
 Methodology, judge choice, and reproduction instructions:

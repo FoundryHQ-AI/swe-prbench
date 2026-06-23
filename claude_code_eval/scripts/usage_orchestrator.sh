@@ -22,7 +22,14 @@ WAIT_INTERVAL="${WAIT_INTERVAL:-3600}"        # 1h between checks while paused
 THRESHOLD_STOP="${THRESHOLD_STOP:-70}"        # stop runs at this session_pct
 THRESHOLD_RESUME="${THRESHOLD_RESUME:-5}"     # resume when session_pct drops below this
 
-state="running"   # "running" or "paused"
+# Default state: detect from currently-running processes. Override
+# explicitly with STATE_AT_START={running,paused}.
+if [[ "${STATE_AT_START:-}" == "running" || "${STATE_AT_START:-}" == "paused" ]]; then
+  state="${STATE_AT_START}"
+else
+  procs_now=$(ps aux | grep "eval_harness/run_eval.py" | grep -v grep | wc -l | tr -d ' ')
+  if [[ ${procs_now} -ge 1 ]]; then state="running"; else state="paused"; fi
+fi
 
 while true; do
   out=$(bash claude_code_eval/scripts/check_usage.sh 2>/dev/null || true)
